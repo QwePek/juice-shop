@@ -51,20 +51,10 @@ export function getUserProfile () {
     }
 
     let username = user.username
-
-    if (username?.match(/#{(.*)}/) !== null && utils.isChallengeEnabled(challenges.usernameXssChallenge)) {
-      req.app.locals.abused_ssti_bug = true
-      const code = username?.substring(2, username.length - 1)
-      try {
-        if (!code) {
-          throw new Error('Username is null')
-        }
-        username = eval(code) // eslint-disable-line no-eval
-      } catch (err) {
-        username = '\\' + username
-      }
+    if (username) {
+      username = username.replace(/[#{}<>$]/g, '')
     } else {
-      username = '\\' + username
+      username = ''
     }
 
     const themeKey = config.get<string>('application.theme') as keyof typeof themes
@@ -85,12 +75,8 @@ export function getUserProfile () {
 
     try {
       const fn = pug.compile(template)
-      const CSP = `img-src 'self' ${user?.profileImage}; script-src 'self' 'unsafe-eval' https://code.getmdl.io http://ajax.googleapis.com`
-
-      challengeUtils.solveIf(challenges.usernameXssChallenge, () => {
-        return username && user?.profileImage.match(/;[ ]*script-src(.)*'unsafe-inline'/g) !== null && utils.contains(username, '<script>alert(`xss`)</script>')
-      })
-
+      const CSP = `img-src 'self' ${user?.profileImage}; script-src 'self' https://code.getmdl.io http://ajax.googleapis.com`
+      
       res.set({
         'Content-Security-Policy': CSP
       })

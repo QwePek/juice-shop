@@ -52,7 +52,13 @@ async function processQuery (user: User, req: Request, res: Response, next: Next
     res.status(503).send()
     return
   }
-  const username = user.username
+  if (user.username == undefined) {
+    res.status(401).send();
+    return;
+  }
+
+  const username = security.sanitizeSecure(user.username)
+
   if (!username) {
     res.status(200).json({
       action: 'namequery',
@@ -138,7 +144,8 @@ async function setUserName (user: User, req: Request, res: Response) {
       })
       return
     }
-    const updatedUser = await userModel.update({ username: req.body.query })
+    const safeUsername = security.sanitizeSecure(req.body.query)
+    const updatedUser = await userModel.update({ username: safeUsername })
     const updatedUserResponse = utils.queryResultToJson(updatedUser)
     const updatedToken = security.authorize(updatedUserResponse)
     security.authenticatedUsers.put(updatedToken, updatedUserResponse)
@@ -180,7 +187,12 @@ export const status = function status () {
       return
     }
 
-    const username = user.username
+    if (user.username == undefined) {
+      res.status(401).send();
+      return;
+    }
+
+    const username = security.sanitizeSecure(user.username)
 
     if (!username) {
       res.status(200).json({
@@ -236,7 +248,7 @@ export function process () {
 
 async function getUserFromJwt (token: string): Promise<User | null> {
   return await new Promise((resolve) => {
-    jwt.verify(token, security.publicKey, (err: VerifyErrors | null, decoded: JwtPayload | string | undefined) => {
+    jwt.verify(token, security.publicKey, { algorithms: ['RS256'] },(err: VerifyErrors | null, decoded: JwtPayload | string | undefined) => {
       if (err !== null || !decoded || isString(decoded)) {
         resolve(null)
       } else {

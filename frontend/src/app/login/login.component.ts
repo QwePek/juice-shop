@@ -130,7 +130,23 @@ export class LoginComponent implements OnInit {
     }
   }
 
+  generateRandomState(length: number): string {
+    const array = new Uint8Array(length);
+    const crypto = this.windowRefService.nativeWindow.crypto;
+    
+    if (crypto) {
+      crypto.getRandomValues(array);
+    } else {
+      return Math.random().toString(36).substring(2); 
+    }
+    
+    return Array.from(array, (byte: any) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
   googleLogin () {
-    this.windowRefService.nativeWindow.location.replace(`${oauthProviderUrl}?client_id=${this.clientId}&response_type=token&scope=email&redirect_uri=${this.redirectUri}`)
+    const state = this.generateRandomState(32)
+    localStorage.setItem('oauthState', state)
+    this.windowRefService.nativeWindow.location.replace(`${oauthProviderUrl}?client_id=${this.clientId}&response_type=token&scope=email&redirect_uri=${this.redirectUri}&state=${state}`
+    )
   }
 }

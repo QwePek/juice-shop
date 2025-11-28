@@ -25,7 +25,19 @@ export class OAuthComponent implements OnInit {
 
 
   ngOnInit (): void {
-    this.userService.oauthLogin(this.parseRedirectUrlParams().access_token).subscribe({
+    const params = this.parseRedirectUrlParams()
+    const receivedState = params['state']
+    const expectedState = localStorage.getItem('oauthState')
+
+    localStorage.removeItem('oauthState')
+
+    if (!receivedState || !expectedState || receivedState !== expectedState) {
+        console.error('Security Error: Invalid or missing OAuth state parameter. Possible CSRF attempt.')
+        this.ngZone.run(async () => await this.router.navigate(['/login']))
+        return
+    }
+
+    this.userService.oauthLogin(params.access_token).subscribe({
       next: (profile: any) => {
         const password = btoa(profile.email.split('').reverse().join(''))
         this.userService.save({ email: profile.email, password, passwordRepeat: password }).subscribe({

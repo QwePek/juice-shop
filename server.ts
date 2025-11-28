@@ -510,6 +510,15 @@ restoreOverwrittenFilesWithOriginals().then(() => {
     } // vuln-code-snippet neutral-line registerAdminChallenge
     // vuln-code-snippet end registerAdminChallenge
 
+    if (name === 'Feedback') {
+      resource.create.write.before((req: Request, res: Response, context: { attributes: { comment: string }, continue: any }) => {
+        if (context.attributes && context.attributes.comment) {
+          context.attributes.comment = security.sanitizeSecure(context.attributes.comment)
+        }
+        return context.continue
+      })
+    }
+
     // translate challenge descriptions on-the-fly
     if (name === 'Challenge') {
       resource.list.fetch.after((req: Request, res: Response, context: { instance: string | any[], continue: any }) => {
